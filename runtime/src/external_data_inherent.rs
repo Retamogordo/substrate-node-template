@@ -3,7 +3,7 @@
 // // use sp_core::sr25519;
 use sp_std::vec::Vec;
 use sp_runtime::RuntimeString;
-use sp_inherents::{InherentIdentifier, IsFatalError, InherentData};
+use sp_inherents::{InherentIdentifier, IsFatalError};
 use sp_core::{Encode, Decode};
 use sp_runtime::traits::Zero;
 use frame_system::WeightInfo;
@@ -32,7 +32,6 @@ pub mod pallet {
     #[pallet::event]
 	#[pallet::generate_deposit(pub(super) fn deposit_event)]
 	pub enum Event<T: Config> {
-//		ExternalDataSet { data: u16,  },
 		ExternalDataSet { data: T::ExternalDataType  },
 	}
 
@@ -42,15 +41,14 @@ pub mod pallet {
 	}
 
 	#[pallet::storage]
-//	pub type ExternalData<T: Config> = StorageValue<_, u16, OptionQuery>;
 	pub type ExternalData<T: Config> = StorageValue<_, T::ExternalDataType, OptionQuery>;
 
 	#[pallet::call]
 	impl<T: Config> Pallet<T>
 	{
+		#[pallet::call_index(0)]
 		#[pallet::weight(12_345_678)]
 		pub fn set(origin: OriginFor<T>, external_data: T::ExternalDataType) -> DispatchResult {
-//			pub fn set(origin: OriginFor<T>, external_data: u16) -> DispatchResult {
 			log::info!("!!!!!!!!!!!!!!!!!!!!!!!!!! in set: data: {:?} ", external_data);
 			ensure_none(origin)?;
 			ensure!(ExternalData::<T>::get().is_none(), Error::<T>::AlreadySet);
@@ -100,7 +98,7 @@ pub mod pallet {
 				.get_data::<InherentType>(&INHERENT_IDENTIFIER)
 				.ok()
 				.unwrap_or_default()
-                .and_then(|mut encoded_data| 
+                .and_then(|encoded_data| 
 //			        Option::<T::ExternalDataType>::decode(&mut &encoded_data[..])
 			        T::ExternalDataType::decode(&mut &encoded_data[..])
 						.ok()

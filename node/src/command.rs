@@ -3,7 +3,6 @@ use crate::{
 	chain_spec,
 	cli::{Cli, Subcommand},
 	service,
-	inherent_data_provider,
 };
 use frame_benchmarking_cli::{BenchmarkCmd, ExtrinsicFactory, SUBSTRATE_REFERENCE_HARDWARE};
 use node_template_runtime::{Block, EXISTENTIAL_DEPOSIT};
