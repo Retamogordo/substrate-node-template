@@ -7,6 +7,9 @@ pub struct Cli {
 
 	#[clap(flatten)]
 	pub run: RunCmd,
+
+	#[clap(long)]
+	pub external_data: Option<u16>,
 }
 
 #[derive(Debug, clap::Subcommand)]

@@ -4351,12 +4351,14 @@ dependencies = [
 name = "node-template"
 version = "4.0.0-dev"
 dependencies = [
+ "async-trait",
  "clap",
  "frame-benchmarking",
  "frame-benchmarking-cli",
  "frame-system",
  "futures",
  "jsonrpsee",
+ "log",
  "node-template-runtime",
  "pallet-transaction-payment",
  "pallet-transaction-payment-rpc",
@@ -4395,6 +4397,7 @@ dependencies = [
 name = "node-template-runtime"
 version = "4.0.0-dev"
 dependencies = [
+ "async-trait",
  "frame-benchmarking",
  "frame-executive",
  "frame-support",
@@ -4402,6 +4405,7 @@ dependencies = [
  "frame-system-benchmarking",
  "frame-system-rpc-runtime-api",
  "frame-try-runtime",
+ "log",
  "pallet-aura",
  "pallet-balances",
  "pallet-grandpa",

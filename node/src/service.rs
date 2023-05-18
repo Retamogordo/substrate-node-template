@@ -8,7 +8,9 @@ pub use sc_executor::NativeElseWasmExecutor;
 use sc_service::{error::Error as ServiceError, Configuration, TaskManager, WarpSyncParams};
 use sc_telemetry::{Telemetry, TelemetryWorker};
 use sp_consensus_aura::sr25519::AuthorityPair as AuraPair;
-use std::{sync::Arc, time::Duration};
+use std::{sync::{Arc, Mutex}, time::Duration};
+use sp_core::{Encode};
+use crate::inherent_data_provider;
 
 // Our native executor instance.
 pub struct ExecutorDispatch;
@@ -37,6 +39,9 @@ type FullSelectChain = sc_consensus::LongestChain<FullBackend, Block>;
 
 pub fn new_partial(
 	config: &Configuration,
+//	external_data: Option<u16>,
+//	external_data: Arc<Mutex<Option<u16>>>,
+	external_data: Option<Arc<Mutex<u16>>>,
 ) -> Result<
 	sc_service::PartialComponents<
 		FullClient,
@@ -57,6 +62,8 @@ pub fn new_partial(
 	>,
 	ServiceError,
 > {
+	log::info!("--------------------------- new_partial: {:?}", external_data);
+
 	let telemetry = config
 		.telemetry_endpoints
 		.clone()
@@ -102,21 +109,30 @@ pub fn new_partial(
 
 	let slot_duration = sc_consensus_aura::slot_duration(&*client)?;
 
+	//let external_data_cloned = external_data.map(|data| Arc::clone(&data));
+//	let external_data_cloned = Arc::clone(&external_data);
+
 	let import_queue =
 		sc_consensus_aura::import_queue::<AuraPair, _, _, _, _, _>(ImportQueueParams {
 			block_import: grandpa_block_import.clone(),
 			justification_import: Some(Box::new(grandpa_block_import.clone())),
 			client: client.clone(),
-			create_inherent_data_providers: move |_, ()| async move {
-				let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
+			create_inherent_data_providers: move |_, ()| {
+//				let external_data_cloned = Arc::clone(&external_data_cloned);
+				let external_data_cloned = external_data.as_ref().map(|data| Arc::clone(&data));
+				async move {
+					let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
 
-				let slot =
-					sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_slot_duration(
-						*timestamp,
-						slot_duration,
-					);
-
-				Ok((slot, timestamp))
+					let slot =
+						sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_slot_duration(
+							*timestamp,
+							slot_duration,
+						);
+	//				let external_data = inherent_data_provider::ExternalDataInherentProvider(external_data.encode());
+					let external_data_provider = inherent_data_provider::ExternalDataInherentProvider(external_data_cloned);
+					
+					Ok((slot, timestamp, external_data_provider))
+				}
 			},
 			spawner: &task_manager.spawn_essential_handle(),
 			registry: config.prometheus_registry(),
@@ -138,7 +154,12 @@ pub fn new_partial(
 }
 
 /// Builds a new service for a full client.
-pub fn new_full(mut config: Configuration) -> Result<TaskManager, ServiceError> {
+pub fn new_full(mut config: Configuration, _external_data: Option<u16>) -> Result<TaskManager, ServiceError> {
+	// let external_data = Some(Arc::new(Mutex::new(0)));
+	// let external_data_cloned = external_data.map(|data| Arc::clone(&data));
+	let external_data = Arc::new(Mutex::new(0));
+	let external_data_cloned = Some(Arc::clone(&external_data));
+
 	let sc_service::PartialComponents {
 		client,
 		backend,
@@ -148,7 +169,7 @@ pub fn new_full(mut config: Configuration) -> Result<TaskManager, ServiceError> 
 		select_chain,
 		transaction_pool,
 		other: (block_import, grandpa_link, mut telemetry),
-	} = new_partial(&config)?;
+	} = new_partial(&config, external_data_cloned)?;
 
 	let grandpa_protocol_name = sc_consensus_grandpa::protocol_standard_name(
 		&client.block_hash(0).ok().flatten().expect("Genesis block exists; qed"),
@@ -229,6 +250,9 @@ pub fn new_full(mut config: Configuration) -> Result<TaskManager, ServiceError> 
 
 		let slot_duration = sc_consensus_aura::slot_duration(&*client)?;
 
+//		let external_data_cloned = Arc::clone(&external_data);
+//		let external_data_cloned = external_data.map(|data| Arc::clone(&data));
+
 		let aura = sc_consensus_aura::start_aura::<AuraPair, _, _, _, _, _, _, _, _, _, _>(
 			StartAuraParams {
 				slot_duration,
@@ -236,17 +260,22 @@ pub fn new_full(mut config: Configuration) -> Result<TaskManager, ServiceError> 
 				select_chain,
 				block_import,
 				proposer_factory,
-				create_inherent_data_providers: move |_, ()| async move {
-					let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
+				create_inherent_data_providers: move |_, ()|
+				{
+					let external_data_cloned = Some(Arc::clone(&external_data));
+					async move {
+						let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
 
-					let slot =
-						sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_slot_duration(
-							*timestamp,
-							slot_duration,
-						);
+						let slot =
+							sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_slot_duration(
+								*timestamp,
+								slot_duration,
+							);
+	//					let external_data = inherent_data_provider::ExternalDataInherentProvider(external_data.encode());
+						let external_data_provider = inherent_data_provider::ExternalDataInherentProvider(external_data_cloned);
 
-					Ok((slot, timestamp))
-				},
+						Ok((slot, timestamp, external_data_provider))
+				}},
 				force_authoring,
 				backoff_authoring_blocks,
 				keystore: keystore_container.keystore(),
