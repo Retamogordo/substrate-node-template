@@ -1,6 +1,6 @@
 use sp_inherents::{InherentIdentifier, InherentData};
 use node_template_runtime::{ExternalDataType};
-use node_template_runtime::external_data_inherent::{INHERENT_IDENTIFIER};
+use node_template_runtime::pallet_template::{INHERENT_IDENTIFIER};
 use async_trait;
 use std::fmt::Debug;
 use sp_core::Encode;
