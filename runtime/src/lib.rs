@@ -46,9 +46,7 @@ pub use sp_runtime::BuildStorage;
 pub use sp_runtime::{Perbill, Permill};
 
 /// Import the template pallet.
-pub use pallet_template;
-
-//pub mod external_data_inherent;
+pub use inherents_example;
 
 /// An index to a block.
 pub type BlockNumber = u32;
@@ -69,7 +67,7 @@ pub type Index = u32;
 /// A hash of some data used by the chain.
 pub type Hash = sp_core::H256;
 
-pub type ExternalDataType = u16;
+pub type InherentDataType = u16;
 
 /// Opaque types. These are used by the CLI to instantiate machinery that don't need to know
 /// the specifics of the runtime. They can then be made to be agnostic over specific formats
@@ -271,19 +269,12 @@ impl pallet_sudo::Config for Runtime {
 	type RuntimeCall = RuntimeCall;
 }
 
-/// Configure the pallet-template in pallets/template.
-impl pallet_template::Config for Runtime {
+/// Configure the inherents-example in pallets/inherents_example.
+impl inherents_example::Config for Runtime {
 	type RuntimeEvent = RuntimeEvent;
-	type WeightInfo = pallet_template::weights::SubstrateWeight<Runtime>;
-	type ExternalDataType = ExternalDataType;
+	type WeightInfo = inherents_example::weights::SubstrateWeight<Runtime>;
+	type InherentDataType = InherentDataType;
 }
-
-// /// Configure the pallet-template in pallets/template.
-// impl external_data_inherent::Config for Runtime {
-// 	type RuntimeEvent = RuntimeEvent;
-// 	type WeightInfo = ();
-// 	type ExternalDataType = ExternalDataType;
-// }
 
 // Create the runtime by composing the FRAME pallets that were previously configured.
 construct_runtime!(
@@ -301,8 +292,7 @@ construct_runtime!(
 		TransactionPayment: pallet_transaction_payment,
 		Sudo: pallet_sudo,
 		// Include the custom logic from the pallet-template in the runtime.
-		TemplateModule: pallet_template,
-//		ExternalDataInherent: external_data_inherent,
+		InherentsExample: inherents_example,
 	}
 );
 
@@ -349,7 +339,7 @@ mod benches {
 		[frame_system, SystemBench::<Runtime>]
 		[pallet_balances, Balances]
 		[pallet_timestamp, Timestamp]
-		[pallet_template, TemplateModule]
+		[inherents_example, InherentsExample]
 	);
 }
 
@@ -399,7 +389,15 @@ impl_runtime_apis! {
 			block: Block,
 			data: sp_inherents::InherentData,
 		) -> sp_inherents::CheckInherentsResult {
-			data.check_extrinsics(&block)
+			let res = data.check_extrinsics(&block);
+
+			// if let Some(data) = InherentsExample::decode_data(&data) {
+			// 	let expected: InherentDataType = 123;
+			// 	if data != expected {
+			// 		res.put_error(inherents_example::INHERENT_IDENTIFIER, &inherents_example::InherentError::NotPresent123);
+			// 	}
+			// }
+			res
 		}
 	}
 

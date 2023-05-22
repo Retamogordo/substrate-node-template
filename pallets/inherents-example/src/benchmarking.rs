@@ -12,23 +12,13 @@ mod benchmarks {
 	use super::*;
 
 	#[benchmark]
-	fn do_something() {
-		let value = 100u32.into();
+	fn set() {
+		let value: T::InherentDataType = Default::default();
 		let caller: T::AccountId = whitelisted_caller();
 		#[extrinsic_call]
-		do_something(RawOrigin::Signed(caller), value);
+		set(RawOrigin::Signed(caller), value);
 
-		assert_eq!(Something::<T>::get(), Some(value));
-	}
-
-	#[benchmark]
-	fn cause_error() {
-		Something::<T>::put(100u32);
-		let caller: T::AccountId = whitelisted_caller();
-		#[extrinsic_call]
-		cause_error(RawOrigin::Signed(caller));
-
-		assert_eq!(Something::<T>::get(), Some(101u32));
+		assert_eq!(InherentDataType::<T>::get(), Some(value));
 	}
 
 	impl_benchmark_test_suite!(Template, crate::mock::new_test_ext(), crate::mock::Test);

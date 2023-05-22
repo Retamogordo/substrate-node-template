@@ -1,6 +1,7 @@
 //! Service and ServiceFactory implementation. Specialized wrapper over substrate service.
 
-use node_template_runtime::{self, opaque::Block, RuntimeApi};
+use crate::inherent_data_provider;
+use node_template_runtime::{self, opaque::Block, InherentDataType, RuntimeApi};
 use sc_client_api::BlockBackend;
 use sc_consensus_aura::{ImportQueueParams, SlotProportion, StartAuraParams};
 use sc_consensus_grandpa::SharedVoterState;
@@ -8,8 +9,7 @@ pub use sc_executor::NativeElseWasmExecutor;
 use sc_service::{error::Error as ServiceError, Configuration, TaskManager, WarpSyncParams};
 use sc_telemetry::{Telemetry, TelemetryWorker};
 use sp_consensus_aura::sr25519::AuthorityPair as AuraPair;
-use std::{sync::{Arc}, time::Duration};
-use crate::inherent_data_provider;
+use std::{sync::Arc, time::Duration};
 
 // Our native executor instance.
 pub struct ExecutorDispatch;
@@ -38,7 +38,7 @@ type FullSelectChain = sc_consensus::LongestChain<FullBackend, Block>;
 
 pub fn new_partial(
 	config: &Configuration,
-	external_data: Option<u16>,
+	//	inherent_data: Option<InherentDataType>,
 ) -> Result<
 	sc_service::PartialComponents<
 		FullClient,
@@ -118,9 +118,11 @@ pub fn new_partial(
 							*timestamp,
 							slot_duration,
 						);
-					let external_data_provider = inherent_data_provider::ExternalDataInherentProvider(external_data);
-					
-					Ok((slot, timestamp, external_data_provider))
+					//					let external_data_provider =
+					// inherent_data_provider::ExternalDataInherentProvider(inherent_data);
+
+					//					Ok((slot, timestamp, external_data_provider))
+					Ok((slot, timestamp))
 				}
 			},
 			spawner: &task_manager.spawn_essential_handle(),
@@ -143,8 +145,10 @@ pub fn new_partial(
 }
 
 /// Builds a new service for a full client.
-pub fn new_full(mut config: Configuration, external_data: Option<u16>) -> Result<TaskManager, ServiceError> {
-
+pub fn new_full(
+	mut config: Configuration,
+	inherent_data: Option<InherentDataType>,
+) -> Result<TaskManager, ServiceError> {
 	let sc_service::PartialComponents {
 		client,
 		backend,
@@ -154,7 +158,7 @@ pub fn new_full(mut config: Configuration, external_data: Option<u16>) -> Result
 		select_chain,
 		transaction_pool,
 		other: (block_import, grandpa_link, mut telemetry),
-	} = new_partial(&config, external_data)?;
+	} = new_partial(&config)?;
 
 	let grandpa_protocol_name = sc_consensus_grandpa::protocol_standard_name(
 		&client.block_hash(0).ok().flatten().expect("Genesis block exists; qed"),
@@ -242,19 +246,19 @@ pub fn new_full(mut config: Configuration, external_data: Option<u16>) -> Result
 				select_chain,
 				block_import,
 				proposer_factory,
-				create_inherent_data_providers: move |_, ()| {
-					async move {
-						let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
+				create_inherent_data_providers: move |_, ()| async move {
+					let timestamp = sp_timestamp::InherentDataProvider::from_system_time();
 
-						let slot =
+					let slot =
 							sp_consensus_aura::inherents::InherentDataProvider::from_timestamp_and_slot_duration(
 								*timestamp,
 								slot_duration,
 							);
-						let external_data_provider = inherent_data_provider::ExternalDataInherentProvider(external_data);
+					let external_data_provider =
+						inherent_data_provider::ExternalDataInherentProvider(inherent_data);
 
-						Ok((slot, timestamp, external_data_provider))
-				}},
+					Ok((slot, timestamp, external_data_provider))
+				},
 				force_authoring,
 				backoff_authoring_blocks,
 				keystore: keystore_container.keystore(),

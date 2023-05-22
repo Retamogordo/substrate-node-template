@@ -1,4 +1,4 @@
-use crate as pallet_template;
+use crate as inherents_example;
 use frame_support::traits::{ConstU16, ConstU64};
 use sp_core::H256;
 use sp_runtime::{
@@ -17,7 +17,7 @@ frame_support::construct_runtime!(
 		UncheckedExtrinsic = UncheckedExtrinsic,
 	{
 		System: frame_system,
-		TemplateModule: pallet_template,
+		InherentsExample: inherents_example,
 	}
 );
 
@@ -48,9 +48,10 @@ impl frame_system::Config for Test {
 	type MaxConsumers = frame_support::traits::ConstU32<16>;
 }
 
-impl pallet_template::Config for Test {
+impl inherents_example::Config for Test {
 	type RuntimeEvent = RuntimeEvent;
 	type WeightInfo = ();
+	type InherentDataType = u16;
 }
 
 // Build genesis storage according to the mock runtime.
